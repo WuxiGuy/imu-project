@@ -4,7 +4,7 @@ llama.cpp
 __pycache__/
 *.py[cod]
 *$py.class
-*.db
+# *.db
 .env
 .venv
 env/
