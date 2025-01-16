@@ -20,22 +20,27 @@ def suppress_stderr():
 def test_llm():
     try:
         with suppress_stderr():
+            # 针对 Raspberry Pi 优化的配置
             llm = Llama(
                 model_path="llama.cpp/models/Mistral-7B-Instruct-v0.3.Q5_K_M.gguf",
-                n_ctx=512,
-                n_threads=4,
-                n_batch=8,
+                n_ctx=256,           # 减小上下文窗口以节省内存
+                n_threads=2,         # 减少线程数以避免过载
+                n_batch=1,           # 最小批处理大小
+                n_gpu_layers=0,      # 禁用 GPU 层
                 verbose=False
             )
             
-            prompt = """<s>[INST] Say "Hello from Raspberry Pi!" [/INST]"""
+            # 使用更短的提示
+            prompt = """<s>[INST] Say "Hi!" [/INST]"""
+            
+            print("Model loaded, generating response...")
             
             response = llm.create_chat_completion(
                 messages=[{
                     "role": "user",
                     "content": prompt
                 }],
-                max_tokens=20,
+                max_tokens=10,       # 减少生成的标记数
                 temperature=0.1,
                 stop=["</s>", "[INST]", "\n"]
             )
@@ -46,4 +51,5 @@ def test_llm():
         print(f"Error: {e}")
 
 if __name__ == "__main__":
+    print("Starting LLM test...")
     test_llm() 
