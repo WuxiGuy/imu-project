@@ -23,12 +23,12 @@ def test_llm():
             llm = Llama(
                 model_path="llama.cpp/models/Mistral-7B-Instruct-v0.3.Q5_K_M.gguf",
                 n_ctx=512,
-                n_threads=2,
+                n_threads=4,
                 n_batch=8,
                 verbose=False
             )
             
-            prompt = """<s>[INST] Say "Hello, test successful!" [/INST]"""
+            prompt = """<s>[INST] Say "Hello from Raspberry Pi!" [/INST]"""
             
             response = llm.create_chat_completion(
                 messages=[{
