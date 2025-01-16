@@ -38,20 +38,19 @@ class LocalLLM:
 		horizontal_movement = analysis_results.get('horizontal_movement', 0)
 		rotation = analysis_results.get('rotation', 0)
 		
-		prompt = f"""<|system|>You are a device status analyzer. You must respond with exactly one word from these options: "stable", "slipping", "unstable", "vibrating". No other responses are allowed.</s>
-<|user|>Current sensor readings:
-	Vertical: {vertical_movement:.2f} cm
-	Horizontal: {horizontal_movement:.2f} cm
-	Rotation: {rotation:.2f} degrees
+		prompt = f"""### Human: Analyze device status with these readings:
+				Vertical: {vertical_movement:.2f} cm
+				Horizontal: {horizontal_movement:.2f} cm
+				Rotation: {rotation:.2f} degrees
 
-Analyze using these exact rules:
-	- If vertical > 3cm output "vibrating"
-	- If horizontal > 3cm output "unstable"
-	- If rotation > 90° output "slipping"
-	- Otherwise output "stable"
+				Rules:
+				- vertical > 3cm = "vibrating"
+				- horizontal > 3cm = "unstable"
+				- rotation > 90° = "slipping"
+				- otherwise = "stable"
 
-Output one word only.</s>
-<|assistant|>Based on the readings and rules, the status is: """
+				Respond with one word only: "stable", "slipping", "unstable", or "vibrating"
+				### Assistant:"""
 		return prompt
 
 	def get_device_status(self):
@@ -65,7 +64,7 @@ Output one word only.</s>
 						prompt=prompt,
 						max_tokens=10,
 						temperature=0.1,
-						stop=["</s>", "<|user|>", "<|system|>", "\n", "."]
+						stop=["###", "\n"]
 					)
 					
 					status = response['choices'][0]['text'].strip()
