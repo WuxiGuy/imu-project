@@ -1,26 +1,43 @@
 import sqlite3
+import os
 
-def init_db(db_path="sensor_data.db"):
-  """
-  Create (if not exist) a SQLite table 'sensor_data' to store IMU raw readings.
-  """
-  conn = sqlite3.connect(db_path)
-  c = conn.cursor()
-  c.execute("""
+def init_database():
+    """Initialize the SQLite database and create the sensor_data table"""
+    db_path = "sensor_data.db"
+    
+    # Check if database already exists
+    if os.path.exists(db_path):
+        print(f"Database already exists at {db_path}")
+        return
+    
+    # Create new database and table
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Create table for sensor data
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS sensor_data (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      timestamp REAL,  -- Unix timestamp (e.g., time.time())
-      ax REAL,         -- Acceleration in X-axis
-      ay REAL,         -- Acceleration in Y-axis
-      az REAL,         -- Acceleration in Z-axis
-      gx REAL,         -- Gyroscope in X-axis
-      gy REAL,         -- Gyroscope in Y-axis
-      gz REAL          -- Gyroscope in Z-axis
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp REAL NOT NULL,
+        x REAL NOT NULL,
+        y REAL NOT NULL,
+        z REAL NOT NULL,
+        rotation_x REAL NOT NULL,
+        rotation_y REAL NOT NULL,
+        rotation_z REAL NOT NULL
     )
-  """)
-  conn.commit()
-  conn.close()
+    """)
+    
+    # Create index on timestamp for faster queries
+    cursor.execute("""
+    CREATE INDEX IF NOT EXISTS idx_timestamp 
+    ON sensor_data(timestamp)
+    """)
+    
+    conn.commit()
+    conn.close()
+    
+    print(f"Database initialized at {db_path}")
 
 if __name__ == "__main__":
-  # Initialize the database
-  init_db("sensor_data.db")
+    init_database()
