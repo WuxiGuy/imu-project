@@ -38,19 +38,17 @@ class LocalLLM:
         horizontal_movement = analysis_results.get('horizontal_movement', 0)
         rotation = analysis_results.get('rotation', 0)
         
-        prompt = f"""<|system|>You are a device status analyzer. You analyze sensor data and provide brief status assessments.</s>
-<|user|>Analyze this sensor data:
-- Vertical movement: {vertical_movement:.2f} cm
-- Horizontal movement: {horizontal_movement:.2f} cm
-- Rotation angle: {rotation:.2f} degrees
+        prompt = f"""<|system|>You are a device status analyzer. Respond with only one of these states: "heavy vibration", "unstable posture", "slipping", or "stable".</s>
+<|user|>Data:
+    - Vertical: {vertical_movement:.2f} cm
+    - Horizontal: {horizontal_movement:.2f} cm
+    - Rotation: {rotation:.2f} degrees
 
 Rules:
-1. If vertical movement > 3cm: "heavy vibration"
-2. If horizontal movement > 3cm: "unstable posture"
-3. If rotation > 90 degrees: "slipping"
-4. If minimal changes: "stable"
-
-Provide a brief status assessment.</s>
+    1. vertical > 3cm = "heavy vibration"
+    2. horizontal > 3cm = "unstable posture"
+    3. rotation > 90° = "slipping"
+    4. minimal changes = "stable"</s>
 <|assistant|>"""
         return prompt
 
@@ -58,25 +56,20 @@ Provide a brief status assessment.</s>
         while True:
             try:
                 with suppress_stderr():
-                    # Get analysis results for the past 30 seconds
                     analysis_results = self.data_analyzer.analyze_recent_data(seconds=30)
-                    
-                    # Generate the prompt
                     prompt = self.generate_prompt(analysis_results)
                     
-                    # Call LLM for response
                     response = self.llm.create_completion(
                         prompt=prompt,
-                        max_tokens=20,
+                        max_tokens=30,
                         temperature=0.1,
                         stop=["</s>", "<|user|>", "<|system|>", "\n"]
                     )
                     
                     status = response['choices'][0]['text'].strip()
-                    print(f"Device Status Assessment: {status}")
+                    print(status)
                 
             except Exception as e:
-                print(f"Error in LLM processing: {e}")
+                print(f"Error: {e}")
             
-            # Wait 5 seconds before next assessment
             time.sleep(5)
