@@ -1,62 +1,55 @@
-import time
 import sqlite3
+import numpy as np
+from datetime import datetime, timedelta
 
-DB_PATH = "sensor_data.db"
-
-def fetch_recent_data(duration=5):
-	"""
-	Fetch rows from the last 'duration' seconds.
-	Returns a list of tuples: (timestamp, ax, ay, az, gx, gy, gz).
-	"""
-	current_time = time.time()
-	start_time = current_time - duration
-	conn = sqlite3.connect(DB_PATH)
-	cursor = conn.cursor()
-	cursor.execute("""
-		SELECT timestamp, ax, ay, az, gx, gy, gz
-		FROM sensor_data
-		WHERE timestamp >= ?
-		ORDER BY timestamp ASC
-	""", (start_time,))
-	rows = cursor.fetchall()
-	conn.close()
-	return rows
-
-def analyze_motion(rows):
-	"""
-	Perform basic threshold checks on raw data.
-	Returns a string: 'heavy vibration', 'unstable posture', 'slipping', or 'stable'.
-	This is a simplified demonstration. Real computation would require calibration and integration.
-	"""
-	if not rows:
-		return "stable"
-
-	# Example thresholds for raw differences (placeholders):
-	up_down_threshold = 3000
-	left_right_threshold = 3000
-	rotation_threshold = 2000
-
-	ax_values = [r[1] for r in rows]  # raw ax
-	ay_values = [r[2] for r in rows]  # raw ay
-	gz_values = [r[6] for r in rows]  # raw gz
-
-	ax_diff = max(ax_values) - min(ax_values)
-	ay_diff = max(ay_values) - min(ay_values)
-	gz_diff = max(gz_values) - min(gz_values)
-
-	if ax_diff > up_down_threshold:
-		return "heavy vibration"
-	elif ay_diff > left_right_threshold:
-		return "unstable posture"
-	elif gz_diff > rotation_threshold:
-		return "slipping"
-	else:
-		return "stable"
-
-def get_motion_status(duration=5):
-	"""
-	Fetch recent sensor data, analyze, and return a string status.
-	"""
-	rows = fetch_recent_data(duration)
-	status = analyze_motion(rows)
-	return status
+class DataAnalyzer:
+	def __init__(self):
+		self.db_path = "sensor_data.db"
+	
+	def get_recent_data(self, seconds=30):
+		"""Retrieve sensor data from the recent time period"""
+		conn = sqlite3.connect(self.db_path)
+		cursor = conn.cursor()
+		
+		time_threshold = datetime.now() - timedelta(seconds=seconds)
+		
+		query = """
+		SELECT timestamp, x, y, z, rotation_x, rotation_y, rotation_z 
+		FROM sensor_data 
+		WHERE timestamp > ?
+		ORDER BY timestamp
+		"""
+		
+		cursor.execute(query, (time_threshold.timestamp(),))
+		data = cursor.fetchall()
+		
+		conn.close()
+		return data
+	
+	def analyze_recent_data(self, seconds=30):
+		"""Analyze recent sensor data for movement patterns"""
+		data = self.get_recent_data(seconds)
+		if not data:
+			return {
+				'vertical_movement': 0,
+				'horizontal_movement': 0,
+				'rotation': 0
+			}
+		
+		# Convert data to numpy array for calculations
+		data_array = np.array(data)
+		
+		# Calculate position changes
+		positions = data_array[:, 1:4]  # x, y, z coordinates
+		vertical_movement = np.std(positions[:, 2])  # z-axis standard deviation
+		horizontal_movement = np.sqrt(np.std(positions[:, 0])**2 + np.std(positions[:, 1])**2)
+		
+		# Calculate rotation changes
+		rotations = data_array[:, 4:7]  # rotation_x, rotation_y, rotation_z
+		max_rotation = np.max(np.abs(rotations[:, 2]))  # using z-axis rotation
+		
+		return {
+			'vertical_movement': vertical_movement * 100,  # convert to centimeters
+			'horizontal_movement': horizontal_movement * 100,  # convert to centimeters
+			'rotation': max_rotation  # degrees
+		}

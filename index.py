@@ -1,29 +1,35 @@
-import time
-import subprocess
-# If you want to directly import functions from sensor_collector.py, you can do so.
-# For example: from sensor_collector import main as sensor_main
-# In this example, we run sensor_collector.py as a separate process.
-from local_llm import run_llm_monitoring
+import threading
+from sensor_collector import SensorCollector
+from local_llm import LocalLLM
 
 def main():
-	"""
-	Main entry point that controls sensor data collection and local LLM monitoring.
-	"""
-	# Start the sensor collector as a separate subprocess.
-	collector_process = subprocess.Popen(["python", "sensor_collector.py"])
-	print("Sensor collector started.")
-
+	# Create sensor collector instance
+	sensor_collector = SensorCollector()
+	
+	# Create LLM instance
+	llm = LocalLLM()
+	
+	# Create and start sensor data collection thread
+	sensor_thread = threading.Thread(
+		target=sensor_collector.collect_data,
+		daemon=True
+	)
+	sensor_thread.start()
+	
+	# Create and start LLM analysis thread
+	llm_thread = threading.Thread(
+		target=llm.get_device_status,
+		daemon=True
+	)
+	llm_thread.start()
+	
 	try:
-		# Run local LLM monitoring in the current process.
-		run_llm_monitoring()
+		# Keep main thread running
+		while True:
+			sensor_thread.join(1)
+			llm_thread.join(1)
 	except KeyboardInterrupt:
-		print("Received KeyboardInterrupt. Stopping processes...")
-	finally:
-		# Terminate the sensor collector
-		print("Terminating sensor_collector.py...")
-		collector_process.terminate()
-		collector_process.wait()
-		print("Sensor collector stopped.")
+		print("\nProgram terminated")
 
 if __name__ == "__main__":
 	main()
